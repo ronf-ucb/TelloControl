@@ -16,7 +16,7 @@ local_address = ('', 9000)
 
 # Create a UDP connection that we'll send the command to
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # Bind to the local address and port
 sock.bind(local_address)
 
