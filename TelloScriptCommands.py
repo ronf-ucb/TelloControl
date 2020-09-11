@@ -1,13 +1,18 @@
 # This example script demonstrates how use Python to allow users to send SDK to Tello commands with their keyboard
 # This script is part of our course on Tello drone programming
 # https://learn.droneblocks.io/p/tello-drone-programming-with-python/
+# #####################
+# send sequence of commands to test response speed
+
 
 # Import the necessary modules
 import socket
 import threading
 import time
+from time import sleep
 import sys
 
+start_time = time.time()
 # IP and port of Tello
 tello_address = ('192.168.10.1', 8889)
 
@@ -27,6 +32,7 @@ def send(message):
   try:
     sock.sendto(message.encode(), tello_address)
     print("Sending message: " + message)
+    print("sent at time %f" % (time.time()-start_time))
   except Exception as e:
     print("Error sending: " + str(e))
 
@@ -38,6 +44,7 @@ def receive():
     try:
       response, ip_address = sock.recvfrom(128)
       print("Received message: " + response.decode(encoding='utf-8'))
+      print("rcv'd at time %f" % (time.time()-start_time))
     except Exception as e:
       # If there's an error close the socket and break out of the loop
       sock.close()
@@ -54,27 +61,26 @@ receiveThread.start()
 print('Type in a Tello SDK command and press the enter key. Enter "quit" to exit this program.')
 
 # Loop infinitely waiting for commands or until the user types quit or ctrl-c
-while True:
   
-  try:
-    # Read keybord input from the user
-    if (sys.version_info > (3, 0)):
-      # Python 3 compatibility
-      message = input('')
-    else:
-      # Python 2 compatibility
-      message = raw_input('')
-    
-    # If user types quit then lets exit and close the socket
-    if 'quit' in message:
-      print("Program exited sucessfully")
-      sock.close()
-      break
-    
+try:
+   
+    message='battery?'
     # Send the command to Tello
     send(message)
+    sleep(0.2)
+    message='temp?'
+    # Send the command to Tello
+    send(message)
+    sleep(0.2)
+    message='tof?'
+    # Send the command to Tello
+    send(message)
+    sleep(0.2)
+    print("Program exited sucessfully")
+    sock.close()
+
     
   # Handle ctrl-c case to quit and close the socket
-  except KeyboardInterrupt as e:
+except KeyboardInterrupt as e:
     sock.close()
-    break
+    print("Program exited after keybd interrupt")

@@ -32,23 +32,24 @@ import time
 from time import sleep
 import sys
 
-INTERVAL = 0.2  # update rate for state information
-
+INTERVAL = 0.5  # update rate for state information
+start_time = time.time()
 # IP and port of Tello for commands
 tello_address = ('192.168.10.1', 8889)
 # IP and port of local computer
-local_address = ('', 9000)
+local_address = ('', 8889)
 # Create a UDP connection that we'll send the command to
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+CmdSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+CmdSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # Bind to the local address and port
-sock.bind(local_address)
+CmdSock.bind(local_address)
 
 ###################
 # socket for state information
-#local_port = 8890
-#socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for sending cmd
-#socket.bind(('', local_port))
-#socket.sendto('command'.encode('utf-8'), tello_address)   # command port on Tello
+local_port = 8890
+StateSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for sending cmd
+StateSock.bind(('', local_port))
+CmdSock.sendto('command'.encode('utf-8'), tello_address)   # command port on Tello
 
 
 # place holder for generating telemetry file
@@ -56,12 +57,13 @@ def report(str):
 #    stdscr.addstr(0, 0, str)
 #    stdscr.refresh()
     print(str)
+    print('time = %f' % (time.time()-start_time))
 
 # Send the message to Tello and allow for a delay in seconds
 def send(message):
   # Try to send the message otherwise print the exception
   try:
-    sock.sendto(message.encode(), tello_address)
+    CmdSock.sendto(message.encode(), tello_address)
     print("Sending message: " + message)
   except Exception as e:
     print("Error sending: " + str(e))
@@ -69,9 +71,10 @@ def send(message):
 # receive state message from Tello
 def rcvstate():
     index = 0
+    print('Started rcvstate thread')
     while not stateStop.is_set():
         index += 1
-        response, ip = socket.recvfrom(1024)
+        response, ip = StateSock.recvfrom(1024)
         if response == 'ok':
             continue
  # .replace formatting gives error in python 3?
@@ -87,11 +90,11 @@ def receive():
   while True:
     # Try to receive the message otherwise print the exception
     try:
-      response, ip_address = sock.recvfrom(128)
+      response, ip_address = CmdSock.recvfrom(128)
       print("Received message: " + response.decode(encoding='utf-8'))
     except Exception as e:
       # If there's an error close the socket and break out of the loop
-      sock.close()
+      CmdSock.close()
       print("Error receiving: " + str(e))
       break
 
@@ -105,7 +108,7 @@ receiveThread.start()
 
 stateThread = threading.Thread(target=rcvstate)
 stateThread.daemon = False  # want clean file close
-stateStop = stateThread.event
+stateStop = threading.Event()
 stateStop.clear()
 stateThread.start()
 
@@ -128,10 +131,10 @@ while True:
     # If user types quit then lets exit and close the socket
     if 'quit' in message:
       print("Program exited")
-      sock.close()  # sockete for commands
-      socket.close()  # socket for state
+      CmdSock.close()  # sockete for commands
       stateStop.set()  # set stop variable
-      stateThread.join()   # wait for termination of state thread
+      stateThread.join()   # wait for termination of state thread before closing socket
+      StateSock.close()  # socket for state  
       print("sockets and threads closed")
       # send message
       
@@ -142,5 +145,9 @@ while True:
     
   # Handle ctrl-c case to quit and close the socket
   except KeyboardInterrupt as e:
-    sock.close()
+    CmdSock.close()
+    StateSock.close()  # socket for state
+    stateStop.set()  # set stop variable
+    stateThread.join()   # wait for termination of state thread
+    print("sockets and threads closed")
     break
