@@ -76,7 +76,7 @@ def writeDataFile(dataFileName):
     print('writing data to file')
     while not dataQ.empty():
         telemdata = dataQ.get()
-        np.savetxt(fileout , [telemdata], fmt='%7.2f', delimiter = ',')  # need to make telemdata a list
+        np.savetxt(fileout , [telemdata], fmt='%7.3f', delimiter = ',')  # need to make telemdata a list
     fileout.close()
 
 
@@ -154,12 +154,13 @@ receiveThread = threading.Thread(target=receive)
 receiveThread.daemon = True
 receiveThread.start()
 
+writeFileHeader(State_data_file_name)  # make sure file is created first so don't delay
 stateThread = threading.Thread(target=rcvstate)
 stateThread.daemon = False  # want clean file close
 stateStop = threading.Event()
 stateStop.clear()
 stateThread.start()
-writeFileHeader(State_data_file_name)
+
 
 # Tell the user what to do
 print('Type in a Tello SDK command and press the enter key. Enter "quit" to exit this program.')
@@ -199,6 +200,12 @@ while True:
         sleep(0.5)
         message='ccw 30' # -10 degrees
         control_input = -30
+        send(message)
+        sleep(0.5)
+        message = 'forward 20'
+        send(message)
+        sleep(0.5)
+        message = 'back 20'
         send(message)
         sleep(0.5)
     message='ccw 1' # -10 degrees

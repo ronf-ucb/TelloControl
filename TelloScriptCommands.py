@@ -76,14 +76,27 @@ try:
     # Send the command to Tello
     send(message)
     sleep(0.2)
-    for i in range(0,4):
-        message='cw 10' # 10 degrees
+    message = 'takeoff'
+    send(message)
+    sleep(1.0) # wait for takeoff and motors to spin up
+    for i in range(0,2):
+        message='cw 45' # 10 degrees
         send(message)
-        sleep(0.1)
-        message='ccw 10' # -10 degrees
+        sleep(0.5)
+        message='ccw 45' # -10 degrees
         send(message)
-        sleep(0.1)
-    print("Program exited sucessfully")
+        sleep(0.5)
+        message = 'forward 20'
+        send(message)
+        sleep(0.5)
+        message = 'back 20'
+        send(message)
+        sleep(0.5)
+        
+    message ='land'
+    send(message)
+    sleep(2.0)
+    
     sock.close()
 
     

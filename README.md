@@ -26,4 +26,5 @@ sleep(0.005) sec, ideal 30.255, actual 32.120 ==> 05.31 msec
 
 file write operation takes ~2 ms each. Need to bring out of loop.
 queue uses < 0.2 ms per sample
+state update only works at 10 Hz.
 

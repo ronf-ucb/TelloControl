@@ -14,7 +14,7 @@ import numpy as np
 from queue import Queue
 
 State_data_file_name = 'statedata.txt'
-INTERVAL = 0.05
+INTERVAL = 0.02
 index = 0 # index for state packet
 start_time = time.time()
 
@@ -37,7 +37,7 @@ def writeDataFile(dataFileName):
     print('writing data to file')
     while not dataQ.empty():
         telemdata = dataQ.get()
-        np.savetxt(fileout , [telemdata], fmt='%7.2f', delimiter = ',')  # need to make telemdata a list
+        np.savetxt(fileout , [telemdata], fmt='%7.3f', delimiter = ',')  # need to make telemdata a list
     fileout.close()
 
 def report(str):
@@ -61,9 +61,11 @@ def report(str):
         telemdata.append(quantity)
     dataQ.put(telemdata)
     end_time = time.time()
-    print('Report function took %7.3f msec' % (1000*(end_time-begin_time)))
-    print(index, end=',')
-
+#    print('Report function took %7.3f msec' % (1000*(end_time-begin_time)))
+    if (index %50) == 0:
+        print(index, end=',')
+ 
+ 
     
     
 if __name__ == "__main__":
