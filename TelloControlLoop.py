@@ -31,8 +31,11 @@ import threading
 import time
 from time import sleep
 import sys
+import numpy as np
 
-INTERVAL = 0.5  # update rate for state information
+State_data_file_name = 'statedata.txt'
+index = 0
+INTERVAL = 0.1  # update rate for state information
 start_time = time.time()
 # IP and port of Tello for commands
 tello_address = ('192.168.10.1', 8889)
@@ -51,13 +54,41 @@ StateSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for sendi
 StateSock.bind(('', local_port))
 CmdSock.sendto('command'.encode('utf-8'), tello_address)   # command port on Tello
 
+def writeFileHeader(dataFileName):
+    fileout = open(dataFileName,'w')
+    #write out parameters in format which can be imported to Excel
+    today = time.localtime()
+    date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
+    date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
+    fileout.write('"Data file recorded ' + date + '"\n')
+# header information
+    fileout.write('index,    time,   mid,x ,y, z, mp, mr, my, pitch, roll, \
+                  yaw, vgx, vgy, vgz, templ, temph, tof, h,bat,baro,time,agx,agy,agz\n\r')
+    fileout.close()
 
-# place holder for generating telemetry file
-def report(str):
+def report(str,index):
 #    stdscr.addstr(0, 0, str)
 #    stdscr.refresh()
-    print(str)
-    print('time = %f' % (time.time()-start_time))
+    telemdata=[]
+    telemdata.append(index)
+    telemdata.append(time.time()-start_time)
+    data = str.split(';')
+    data.pop() # get rid of last element, which is \\r\\n
+    for value in data:
+        temp = value.split(':')
+        if temp[0] == 'mpry':    # roll/pitch/yaw
+            temp1 = temp[1].split(',')
+            telemdata.append(float(temp1[0]))     # roll
+            telemdata.append(float(temp1[1]))     # pitch
+            telemdata.append(float(temp1[2]))     # yaw
+            continue
+        quantity = float(value.split(':')[1])
+        telemdata.append(quantity)
+    print(index, end=',')
+    fileout = open(State_data_file_name, 'a')  # append
+    np.savetxt(fileout , [telemdata], fmt='%7.2f', delimiter = ',')  # need to make telemdata a list
+    fileout.close()
+    
 
 # Send the message to Tello and allow for a delay in seconds
 def send(message):
@@ -70,18 +101,19 @@ def send(message):
 
 # receive state message from Tello
 def rcvstate():
-    index = 0
     print('Started rcvstate thread')
+    index = 0
     while not stateStop.is_set():
-        index += 1
+        
         response, ip = StateSock.recvfrom(1024)
         if response == 'ok':
             continue
  # .replace formatting gives error in python 3?
  #           out = response.replace(';', ';\n')
         out = 'Tello State:\n' + str(response)
-        report(out)
+        report(str(response),index)
         sleep(INTERVAL)
+        index +=1
     print('finished rcvstate thread')
 
 # Receive the message from Tello
@@ -111,7 +143,7 @@ stateThread.daemon = False  # want clean file close
 stateStop = threading.Event()
 stateStop.clear()
 stateThread.start()
-
+writeFileHeader(State_data_file_name)
 
 # Tell the user what to do
 print('Type in a Tello SDK command and press the enter key. Enter "quit" to exit this program.')

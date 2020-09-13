@@ -10,21 +10,33 @@
 import socket
 from time import sleep
 import time
-# import curses
+import numpy as np
 
-INTERVAL = 0.2
+State_data_file_name = 'statedata.txt'
+INTERVAL = 0.1
 index = 0 # index for state packet
+start_time = time.time()
 
+
+
+def writeFileHeader(dataFileName):
+    fileout = open(dataFileName,'w')
+    #write out parameters in format which can be imported to Excel
+    today = time.localtime()
+    date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
+    date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
+    fileout.write('"Data file recorded ' + date + '"\n')
 # header information
-print('mid,x,y,z,mp, mr, my,pitch,roll,yaw,vgx,vgy,vgz,templ,temph,tof,h,bat,baro,time,agx,agy,agz')
-
+    fileout.write('index,    time,   mid,x ,y, z, mp, mr, my, pitch, roll, \
+                  yaw, vgx, vgy, vgz, templ, temph, tof, h,bat,baro,time,agx,agy,agz\n\r')
+    fileout.close()
 
 def report(str):
 #    stdscr.addstr(0, 0, str)
 #    stdscr.refresh()
     telemdata=[]
     telemdata.append(index)
-    telemdata.append(time.time())
+    telemdata.append(time.time()-start_time)
     data = str.split(';')
     data.pop() # get rid of last element, which is \\r\\n
     for value in data:
@@ -37,8 +49,11 @@ def report(str):
             continue
         quantity = float(value.split(':')[1])
         telemdata.append(quantity)
-    index=index+1
-    print(telemdata)
+    print(index, end=',')
+    fileout = open(State_data_file_name, 'a')  # append
+    np.savetxt(fileout , [telemdata], fmt='%7.2f', delimiter = ',')  # need to make telemdata a list
+    fileout.close()
+    
     
 if __name__ == "__main__":
  #   stdscr = curses.initscr()
@@ -55,7 +70,7 @@ if __name__ == "__main__":
     tello_adderss = (tello_ip, tello_port)
 
     socket.sendto('command'.encode('utf-8'), tello_adderss)
-
+    writeFileHeader(State_data_file_name)
     try:
         index = 0
         while True:

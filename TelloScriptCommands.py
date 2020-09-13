@@ -10,8 +10,9 @@ import socket
 import threading
 import time
 from time import sleep
-import sys
+#import sys
 
+control_input=0 # command being sent to tello
 start_time = time.time()
 # IP and port of Tello
 tello_address = ('192.168.10.1', 8889)
@@ -76,6 +77,13 @@ try:
     # Send the command to Tello
     send(message)
     sleep(0.2)
+    for i in range(0,4):
+        message='cw 10' # 10 degrees
+        send(message)
+        sleep(0.1)
+        message='ccw 10' # -10 degrees
+        send(message)
+        sleep(0.1)
     print("Program exited sucessfully")
     sock.close()
 
