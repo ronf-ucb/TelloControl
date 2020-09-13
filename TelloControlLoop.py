@@ -32,11 +32,16 @@ import time
 from time import sleep
 import sys
 import numpy as np
+from queue import Queue
+
 
 State_data_file_name = 'statedata.txt'
 index = 0
-INTERVAL = 0.1  # update rate for state information
+control_input = 0 # command being sent to tello
+INTERVAL = 0.05  # update rate for state information
 start_time = time.time()
+dataQ = Queue()
+
 # IP and port of Tello for commands
 tello_address = ('192.168.10.1', 8889)
 # IP and port of local computer
@@ -62,9 +67,19 @@ def writeFileHeader(dataFileName):
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
 # header information
-    fileout.write('index,    time,   mid,x ,y, z, mp, mr, my, pitch, roll, \
+    fileout.write('index,    time,   control, mid,x ,y, z, mp, mr, my, pitch, roll, \
                   yaw, vgx, vgy, vgz, templ, temph, tof, h,bat,baro,time,agx,agy,agz\n\r')
     fileout.close()
+
+def writeDataFile(dataFileName):
+    fileout = open(State_data_file_name, 'a')  # append
+    print('writing data to file')
+    while not dataQ.empty():
+        telemdata = dataQ.get()
+        np.savetxt(fileout , [telemdata], fmt='%7.2f', delimiter = ',')  # need to make telemdata a list
+    fileout.close()
+
+
 
 def report(str,index):
 #    stdscr.addstr(0, 0, str)
@@ -72,6 +87,7 @@ def report(str,index):
     telemdata=[]
     telemdata.append(index)
     telemdata.append(time.time()-start_time)
+    telemdata.append(control_input) # ok if single input, otherwise need to synchronise
     data = str.split(';')
     data.pop() # get rid of last element, which is \\r\\n
     for value in data:
@@ -84,10 +100,10 @@ def report(str,index):
             continue
         quantity = float(value.split(':')[1])
         telemdata.append(quantity)
-    print(index, end=',')
-    fileout = open(State_data_file_name, 'a')  # append
-    np.savetxt(fileout , [telemdata], fmt='%7.2f', delimiter = ',')  # need to make telemdata a list
-    fileout.close()
+    dataQ.put(telemdata)
+    if (index %100) == 0:
+        print(index, end=',')
+ 
     
 
 # Send the message to Tello and allow for a delay in seconds
@@ -110,7 +126,7 @@ def rcvstate():
             continue
  # .replace formatting gives error in python 3?
  #           out = response.replace(';', ';\n')
-        out = 'Tello State:\n' + str(response)
+        # out = 'Tello State:\n' + str(response)
         report(str(response),index)
         sleep(INTERVAL)
         index +=1
@@ -167,6 +183,7 @@ while True:
       stateStop.set()  # set stop variable
       stateThread.join()   # wait for termination of state thread before closing socket
       StateSock.close()  # socket for state  
+      writeDataFile(State_data_file_name)
       print("sockets and threads closed")
       # send message
       
@@ -174,12 +191,30 @@ while True:
     
     # Send the command to Tello
     send(message)
+    sleep(1.0) # wait for takeoff and motors to spin up
+    for i in range(0,4):
+        message='cw 30' # 10 degrees
+        control_input = 30
+        send(message)
+        sleep(0.5)
+        message='ccw 30' # -10 degrees
+        control_input = -30
+        send(message)
+        sleep(0.5)
+    message='ccw 1' # -10 degrees
+    control_input = 1
+    send(message)
+    message ='land'
+    send(message)
     
-  # Handle ctrl-c case to quit and close the socket
+    # Handle ctrl-c case to quit and close the socket
   except KeyboardInterrupt as e:
+    message='emergency' # try to turn off motors
+    send(message)
     CmdSock.close()
     StateSock.close()  # socket for state
     stateStop.set()  # set stop variable
+    writeDataFile(State_data_file_name)
     stateThread.join()   # wait for termination of state thread
     print("sockets and threads closed")
     break

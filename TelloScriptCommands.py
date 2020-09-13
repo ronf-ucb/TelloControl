@@ -12,7 +12,6 @@ import time
 from time import sleep
 #import sys
 
-control_input=0 # command being sent to tello
 start_time = time.time()
 # IP and port of Tello
 tello_address = ('192.168.10.1', 8889)

@@ -11,13 +11,14 @@ import socket
 from time import sleep
 import time
 import numpy as np
+from queue import Queue
 
 State_data_file_name = 'statedata.txt'
-INTERVAL = 0.1
+INTERVAL = 0.05
 index = 0 # index for state packet
 start_time = time.time()
 
-
+dataQ = Queue()
 
 def writeFileHeader(dataFileName):
     fileout = open(dataFileName,'w')
@@ -31,9 +32,18 @@ def writeFileHeader(dataFileName):
                   yaw, vgx, vgy, vgz, templ, temph, tof, h,bat,baro,time,agx,agy,agz\n\r')
     fileout.close()
 
+def writeDataFile(dataFileName):
+    fileout = open(State_data_file_name, 'a')  # append
+    print('writing data to file')
+    while not dataQ.empty():
+        telemdata = dataQ.get()
+        np.savetxt(fileout , [telemdata], fmt='%7.2f', delimiter = ',')  # need to make telemdata a list
+    fileout.close()
+
 def report(str):
 #    stdscr.addstr(0, 0, str)
 #    stdscr.refresh()
+    begin_time=time.time()
     telemdata=[]
     telemdata.append(index)
     telemdata.append(time.time()-start_time)
@@ -49,10 +59,11 @@ def report(str):
             continue
         quantity = float(value.split(':')[1])
         telemdata.append(quantity)
+    dataQ.put(telemdata)
+    end_time = time.time()
+    print('Report function took %7.3f msec' % (1000*(end_time-begin_time)))
     print(index, end=',')
-    fileout = open(State_data_file_name, 'a')  # append
-    np.savetxt(fileout , [telemdata], fmt='%7.2f', delimiter = ',')  # need to make telemdata a list
-    fileout.close()
+
     
     
 if __name__ == "__main__":
@@ -90,5 +101,5 @@ if __name__ == "__main__":
  #       curses.endwin()
         print('Closed by keyboard interrupt')
         socket.close()
-
+        writeDataFile(State_data_file_name)
 
