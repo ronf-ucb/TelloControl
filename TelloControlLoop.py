@@ -13,7 +13,7 @@
  # state format string:
  # b'mid:64;x:0;y:0;z:0;mpry:0,0,0;pitch:-3;roll:-7;yaw:87;vgx:0;vgy:0;vgz:0;
 # templ:80;temph:82;tof:10;h:0;bat:80;baro:218.46;time:13;agx:-67.00;agy:125.00;agz:-992.00;\r\n'
- # convert string to nuber, map?
+ # convert string to nubmer, map?
  # .find?
  # b'mid:64; x:0; y:0; z:0 ;mpry:0,0,0; pitch:-3; roll:-7; yaw:87; vgx:0;vgy:0;vgz:0;
  # 0          1    2    3      4         5          6         7     8     9      10

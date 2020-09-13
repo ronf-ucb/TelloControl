@@ -12,7 +12,7 @@ import sys
 tello_address = ('192.168.10.1', 8889)
 
 # IP and port of local computer
-#local_address = ('', 9000)  # switch to 8889 for same send/receive port?
+#local_address = ('', 9000)  # **** sometimes 9000 works but 8889 does not ****
 local_address = ('', 8889)  # switch to 8889 for same send/receive port?
 
 # Create a UDP connection that we'll send the command to
