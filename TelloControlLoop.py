@@ -33,6 +33,7 @@ from time import sleep
 import sys
 import numpy as np
 from queue import Queue
+from queue import LifoQueue
 
 
 State_data_file_name = 'statedata.txt'
@@ -41,6 +42,7 @@ control_input = 0 # command being sent to tello
 INTERVAL = 0.05  # update rate for state information
 start_time = time.time()
 dataQ = Queue()
+stateQ = LifoQueue() # have top element available for reading present state by control loop
 
 # IP and port of Tello for commands
 tello_address = ('192.168.10.1', 8889)
@@ -101,6 +103,7 @@ def report(str,index):
         quantity = float(value.split(':')[1])
         telemdata.append(quantity)
     dataQ.put(telemdata)
+    stateQ.put(telemdata)
     if (index %100) == 0:
         print(index, end=',')
  
@@ -111,7 +114,7 @@ def send(message):
   # Try to send the message otherwise print the exception
   try:
     CmdSock.sendto(message.encode(), tello_address)
-    print("Sending message: " + message)
+    # print("Sending message: " + message)
   except Exception as e:
     print("Error sending: " + str(e))
 
@@ -192,25 +195,26 @@ while True:
     
     # Send the command to Tello
     send(message)
-    sleep(1.0) # wait for takeoff and motors to spin up
-    for i in range(0,4):
-        message='cw 30' # 10 degrees
-        control_input = 30
+    sleep(10.0) # wait for takeoff and motors to spin up
+    # height in centimeters
+    target = 150
+    kp = 1
+    for i in range(0,500):
+        presentState = stateQ.get(block=True, timeout=None)  # block if needed until new state is ready
+        height = presentState[19]
+        ptime = presentState[1]  # present time (don't over write time function)
+        target = 100+50*np.sin(2*np.pi*ptime/5)
+        error = target - height
+        speed = kp*error
+        control_input = int(np.clip(-100,100,speed))
+        message = 'rc 0 0 '+str(control_input)+' 0'
         send(message)
-        sleep(0.5)
-        message='ccw 30' # -10 degrees
-        control_input = -30
-        send(message)
-        sleep(0.5)
-        message = 'forward 20'
-        send(message)
-        sleep(0.5)
-        message = 'back 20'
-        send(message)
-        sleep(0.5)
-    message='ccw 1' # -10 degrees
-    control_input = 1
+        sleep(0.1)
+       
+    message='rc 0 0 0 0' # stop motion
+    control_input = 0
     send(message)
+    sleep(1.5)
     message ='land'
     send(message)
     
