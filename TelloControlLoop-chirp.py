@@ -207,19 +207,20 @@ while True:
     send(message)
     sleep(0.5)
     dist = 10
-    for i in range(0,9):
-        message=message='cw '+str(dist) # rotate back
+    for i in range(0,8):
+#        message=message='cw '+str(dist) # rotate back
+        message = 'rc 0 0 '+str(dist)+' 0'
         control_input = dist
         send(message)
-        sleep(2.0)
-        message=message='ccw '+str(dist) # rotate back
+        sleep(1.0)
+        message=message='rc 0 0 '+str(-dist)+' 0' # go back down
         control_input = -dist
         send(message)
-        sleep(2.0)
-        dist = dist + 5
+        sleep(0.9)  # go a bit lower, so don't hit floor
+        dist = dist + 10
         
-    message='ccw 1' # -10 degrees
-    control_input = 1
+    message='rc 0 0 0 0' # stop motion
+    control_input = 0
     send(message)
     sleep(1.5)
     message ='land'
