@@ -8,6 +8,8 @@ import threading
 import time
 import sys
 
+start_time = time.time()
+
 # IP and port of Tello
 tello_address = ('192.168.10.1', 8889)
 
@@ -26,7 +28,8 @@ def send(message):
   # Try to send the message otherwise print the exception
   try:
     sock.sendto(message.encode(), tello_address)
-    print("Sending message: " + message)
+ #   print("Sending message: " + message)
+    print("time: %10.4f  Sending message: %s" % (time.time()-start_time, message))
   except Exception as e:
     print("Error sending: " + str(e))
 
@@ -37,7 +40,8 @@ def receive():
     # Try to receive the message otherwise print the exception
     try:
       response, ip_address = sock.recvfrom(128)
-      print("Received message: " + response.decode(encoding='utf-8'))
+      print("time: %10.4f  Received message: %s" % (time.time()-start_time, response.decode(encoding='utf-8')))
+#      print("Received message: " + response.decode(encoding='utf-8'))
     except Exception as e:
       # If there's an error close the socket and break out of the loop
       sock.close()

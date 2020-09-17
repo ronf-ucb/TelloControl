@@ -14,7 +14,7 @@ import numpy as np
 from queue import Queue
 
 State_data_file_name = 'statedata.txt'
-INTERVAL = 0.02
+INTERVAL = 0.1
 index = 0 # index for state packet
 start_time = time.time()
 
