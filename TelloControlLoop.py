@@ -197,19 +197,22 @@ while True:
     send(message)
     sleep(10.0) # wait for takeoff and motors to spin up
     # height in centimeters
+    print('takeoff done')
     target = 150
     kp = 1
+    freq = 0.2
     for i in range(0,500):
         presentState = stateQ.get(block=True, timeout=None)  # block if needed until new state is ready
         height = presentState[19]
         ptime = presentState[1]  # present time (don't over write time function)
-        target = 100+50*np.sin(2*np.pi*ptime/5)
+        target = 100+50*np.sin(2*np.pi*ptime*freq)
         error = target - height
         speed = kp*error
         control_input = int(np.clip(-100,100,speed))
         message = 'rc 0 0 '+str(control_input)+' 0'
         send(message)
         sleep(0.1)
+        freq = freq+.001
        
     message='rc 0 0 0 0' # stop motion
     control_input = 0
@@ -217,6 +220,7 @@ while True:
     sleep(1.5)
     message ='land'
     send(message)
+    print('landing')
     
     # Handle ctrl-c case to quit and close the socket
   except KeyboardInterrupt as e:
