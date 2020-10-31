@@ -5,6 +5,7 @@
 # Import the necessary modules
 import socket
 import threading
+import select
 import time
 import sys
 
@@ -22,6 +23,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # Bind to the local address and port
 sock.bind(local_address)
+sock.setblocking(0)   # set to non-blocking
 
 # Send the message to Tello and allow for a delay in seconds
 def send(message):
@@ -36,11 +38,14 @@ def send(message):
 # Receive the message from Tello
 def receive():
   # Continuously loop and listen for incoming messages
-  while True:
+  while not receiveStop.is_set():
     # Try to receive the message otherwise print the exception
     try:
-      response, ip_address = sock.recvfrom(128)
-      print("time: %10.4f  Received message: %s" % (time.time()-start_time, response.decode(encoding='utf-8')))
+      ready = select.select([sock],[],[], 1.0) # try with 1 second timeout
+#      print('ready=', ready)
+      if ready[0]:
+         response, ip_address = sock.recvfrom(128)
+         print("time: %10.4f  Received message: %s" % (time.time()-start_time, response.decode(encoding='utf-8')))
 #      print("Received message: " + response.decode(encoding='utf-8'))
     except Exception as e:
       # If there's an error close the socket and break out of the loop
@@ -51,7 +56,9 @@ def receive():
 # Create and start a listening thread that runs in the background
 # This utilizes our receive function and will continuously monitor for incoming messages
 receiveThread = threading.Thread(target=receive)
-receiveThread.daemon = True
+receiveThread.daemon = False
+receiveStop = threading.Event()
+receiveStop.clear()
 receiveThread.start()
 
 # Tell the user what to do
@@ -71,8 +78,10 @@ while True:
     
     # If user types quit then lets exit and close the socket
     if 'quit' in message:
-      print("Program exited sucessfully")
+      receiveStop.set()  # set stop variable
+      receiveThread.join(timeout=3.0)   # wait for termination of state thread before c
       sock.close()
+      print("Program exited sucessfully")
       break
     
     # Send the command to Tello
