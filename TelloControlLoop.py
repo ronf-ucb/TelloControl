@@ -16,11 +16,16 @@
  # convert string to nubmer, map?
  # .find?
  # b'mid:64; x:0; y:0; z:0 ;mpry:0,0,0; pitch:-3; roll:-7; yaw:87; vgx:0;vgy:0;vgz:0;
- # 0          1    2    3      4         5          6         7     8     9      10
+ # 0          1    2    3      4         5         6         6         7     8     9      10
 # templ:80;temph:82;tof:10; h:0; bat:80; baro:218.46; 
  # 11       12      13      14    15      16
 # time:13; agx:-67.00; agy:125.00; agz:-992.00;\r\n'
 #   17      18          19           20
+# data file format:
+#  'index,    time,   control, mid, x ,y, z, mp, mr, my, pitch, roll, 
+#    0          1       2       3   4  5  6  7  8    9    10      11
+# yaw, vgx, vgy, vgz, templ, temph, tof, h, bat, baro,time,agx,agy,agz\n\r')  
+#   12  13  14   15    16     17    18   19  20   21    22  23  24  25                                18    19
 # This example script demonstrates how use Python to allow users to send SDK to Tello commands with their keyboard
 # This script is part of our course on Tello drone programming
 # https://learn.droneblocks.io/p/tello-drone-programming-with-python/
@@ -62,9 +67,13 @@ StateSock.bind(('', local_port))
 CmdSock.sendto('command'.encode('utf-8'), tello_address)   # command port on Tello
 
 def writeFileHeader(dataFileName):
-    fileout = open(dataFileName,'w')
+    global State_data_file_name
     #write out parameters in format which can be imported to Excel
     today = time.localtime()
+    version = str(today.tm_year)+ '-' + str(today.tm_mon)+str(today.tm_mday) +'-'
+    version = version + str(today.tm_hour)+ str(today.tm_min)
+    State_data_file_name = 'statedata'+version+'.txt'
+    fileout = open(State_data_file_name,'w')
     date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
@@ -198,21 +207,40 @@ while True:
     sleep(10.0) # wait for takeoff and motors to spin up
     # height in centimeters
     print('takeoff done')
-    target = 150
+    target = 20
     kp = 1
-    freq = 0.2
-    for i in range(0,500):
+  # takeoff   goes to 100 cm. tof is cleaner signal than h
+    for i in range(0,400):
         presentState = stateQ.get(block=True, timeout=None)  # block if needed until new state is ready
-        height = presentState[19]
+        height = presentState[18]  # tof better than h
         ptime = presentState[1]  # present time (don't over write time function)
-        target = 100+50*np.sin(2*np.pi*ptime*freq)
         error = target - height
         speed = kp*error
         control_input = int(np.clip(-100,100,speed))
-        message = 'rc 0 0 '+str(control_input)+' 0'
+        message = 'rc 0 0 '+str(control_input)+' 0'   # z velocity
+#        message = 'rc 0 0 0 0'  # null message for debugging
         send(message)
         sleep(0.1)
-        freq = freq+.001
+        if (i%50) == 0:
+            if (target == 20):
+                target = 50
+            else:
+                target = 20
+  
+    
+    # freq = 0.2
+    # for i in range(0,500):
+    #     presentState = stateQ.get(block=True, timeout=None)  # block if needed until new state is ready
+    #     height = presentState[19]
+    #     ptime = presentState[1]  # present time (don't over write time function)
+    #     target = 100+50*np.sin(2*np.pi*ptime*freq)
+    #     error = target - height
+    #     speed = kp*error
+    #     control_input = int(np.clip(-100,100,speed))
+    #     message = 'rc 0 0 '+str(control_input)+' 0'
+    #     send(message)
+    #     sleep(0.1)
+    #     freq = freq+.001
        
     message='rc 0 0 0 0' # stop motion
     control_input = 0
