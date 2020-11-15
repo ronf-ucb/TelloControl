@@ -1,5 +1,6 @@
 import socket
 from time import sleep
+import sys
 # import curses
 
 INTERVAL = 0.2
@@ -16,11 +17,15 @@ if __name__ == "__main__":
  #   curses.noecho()
  #   curses.cbreak()
 
+    # local_ip = '192.168.10.1'
     local_ip = ''
     local_port = 8890
-    socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for sending cmd
-    socket.bind((local_ip, local_port))
-
+    try:
+        socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # socket for sending cmd
+        socket.bind((local_ip, local_port))
+    except OSError: 
+        print('Socket open error')
+        sys.exit()
     tello_ip = '192.168.10.1'
     tello_port = 8889
     tello_adderss = (tello_ip, tello_port)
@@ -44,6 +49,7 @@ if __name__ == "__main__":
  #       curses.nocbreak()
  #       curses.endwin()
         print('Closed by keyboard interrupt')
+        socket.shutdown(socket.SHUT_RDWR)
         socket.close()
 
 
